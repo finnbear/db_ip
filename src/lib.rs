@@ -43,7 +43,7 @@ pub enum Error {
 /// In general, the fewer the possibilities, the more compressed the data structure will be. For
 /// Example, if you mapped a country code to a boolean, the data structure will store very large
 /// ranges of true/false, consisting of multiple consecutive ranges in the original dataset.
-pub trait IpData: Copy + Clone + Eq + PartialEq {
+pub trait IpData: Copy + Clone + PartialEq {
     /// db-ip data consists of country codes, any other information must be derived from them.
     fn from_country_code(country_code: CountryCode) -> Option<Self>;
 }
