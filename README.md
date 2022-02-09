@@ -48,6 +48,8 @@ the `serde` feature to create and load a serialized version.
 You can selectively disable the `ipv4` and `ipv6` features, depending on your needs. Both are
 on by default.
 
+Lookups are relatively speedy, taking less than 100ns in release mode.
+
 ## Limitations
 
 This crate currently only supports [db-ip.com](https://db-ip.com/) Country data, not City, ASN, location, etc.

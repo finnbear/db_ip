@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![cfg_attr(all(test, feature = "nightly"), feature(test))]
 
 use std::convert::TryInto;
 use std::fmt;
@@ -445,6 +446,8 @@ fn ip_to_bytes(ip: IpAddr) -> Vec<u8> {
 #[cfg(test)]
 #[cfg(any(feature = "ipv4", feature = "ipv6"))]
 mod test {
+    #[cfg(feature = "nightly")]
+    extern crate test;
     use crate::{CountryCode, DbIp};
 
     #[test]
@@ -582,6 +585,46 @@ mod test {
             de.get(&"1.0.0.0".parse().unwrap()),
             Some(CountryCode::from_str("AU").unwrap())
         );
+    }
+
+    // cargo bench --features nightly  -- bench_region_v4
+    #[allow(soft_unstable)]
+    #[cfg(feature = "nightly")]
+    #[bench]
+    fn bench_region_v4(b: &mut test::Bencher) {
+        use crate::Region;
+        use std::net::Ipv4Addr;
+
+        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./data.csv") {
+            let mut i = 0u32;
+
+            b.iter(|| {
+                test::black_box(db_ip.get_v4(&Ipv4Addr::from(i.to_be_bytes())));
+                i = i.wrapping_add(1).wrapping_mul(7);
+            });
+        } else {
+            println!("Warning: create data.csv to run all benchmarks.");
+        }
+    }
+
+    // cargo bench --features nightly  -- bench_region_v6
+    #[allow(soft_unstable)]
+    #[cfg(feature = "nightly")]
+    #[bench]
+    fn bench_region_v6(b: &mut test::Bencher) {
+        use crate::Region;
+        use std::net::Ipv6Addr;
+
+        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./data.csv") {
+            let mut i = 0u128;
+
+            b.iter(|| {
+                test::black_box(db_ip.get_v6(&Ipv6Addr::from(i.to_be_bytes())));
+                i = i.wrapping_add(1).wrapping_mul(7);
+            });
+        } else {
+            println!("Warning: create data.csv to run all benchmarks.");
+        }
     }
 }
 

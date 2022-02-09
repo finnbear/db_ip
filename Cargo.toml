@@ -12,6 +12,7 @@ default = ["ipv4", "ipv6", "region"]
 region = []
 ipv4 = []
 ipv6 = []
+nightly = []
 
 [dependencies]
 csv = "1.1"
