@@ -48,6 +48,13 @@ the `serde` feature to create and load a serialized version.
 You can selectively disable the `ipv4` and `ipv6` features, depending on your needs. Both are
 on by default.
 
+## Limitations
+
+This crate currently only supports [db-ip.com](https://db-ip.com/) Country data, not City, ASN, location, etc.
+
+If you want access to one of those other types of data, create an issue. Adding support is possible,
+but would be a breaking-change for implementors of custom `IpData`.
+
 ## License
 
 Licensed under either of
