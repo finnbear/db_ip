@@ -34,9 +34,9 @@ assert_eq!(
 
 Finally, you can implement `IpData` yourself, to store any other type of data that is country-specific.
 
-### Downloading IP Geolocation Data
+## Downloading IP Geolocation Data
 
-You can visit [db-ip](https://db-ip.com/db/download/ip-to-country-lite) to download the actual ip geolocation data.
+You must visit [db-ip](https://db-ip.com/db/download/ip-to-country-lite) to download the actual ip geolocation data.
 
 Make sure you select the Country data in CSV format. The "lite" data is currently free, but subject to terms.
 
