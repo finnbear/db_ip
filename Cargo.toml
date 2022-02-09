@@ -9,14 +9,14 @@ description = "An (unofficial) Rust library for querying db-ip.com data"
 
 [features]
 default = ["ipv4", "ipv6", "region"]
-region = []
+region = ["locale-codes"]
 ipv4 = []
 ipv6 = []
 nightly = []
 
 [dependencies]
 csv = "1.1"
-locale-codes = "0.3"
+locale-codes = {version = "0.3", optional = true}
 serde = {version = "1.0", features=["derive"], optional=true}
 doc-comment = "0.3"
 
