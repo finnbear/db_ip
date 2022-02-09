@@ -20,5 +20,3 @@ jobs:
       run: cargo build --verbose
     - name: Run default features tests
       run: cargo test --verbose
-    - name: Run all features tests
-      run: cargo test --all-features --verbose
