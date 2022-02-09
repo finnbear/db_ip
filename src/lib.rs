@@ -457,30 +457,32 @@ mod test {
     fn region_v4() {
         use crate::Region;
 
-        let db_ip =
-            DbIp::<Region>::from_csv_file("./data.csv").expect("you must download data.csv");
+        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./data.csv") {
+            /*
+            let ser = bincode::serialize(&db_ip).unwrap();
+            println!("{} {} {}", db_ip.len_v4(), db_ip.len_v6(), ser.len());
+             */
 
-        /*
-        let ser = bincode::serialize(&db_ip).unwrap();
-        println!("{} {} {}", db_ip.len_v4(), db_ip.len_v6(), ser.len());
-         */
-
-        assert_eq!(
-            db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
-            Some(Region::America)
-        );
+            assert_eq!(
+                db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
+                Some(Region::America)
+            );
+        } else {
+            println!("Warning: create data.csv to run all test.");
+        }
     }
 
     #[test]
     #[cfg(feature = "ipv4")]
     fn country_code_v4() {
-        let db_ip =
-            DbIp::<CountryCode>::from_csv_file("./data.csv").expect("you must download data.csv");
-
-        assert_eq!(
-            db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
-            Some(CountryCode::from_str("US").unwrap())
-        );
+        if let Ok(db_ip) = DbIp::<CountryCode>::from_csv_file("./data.csv") {
+            assert_eq!(
+                db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
+                Some(CountryCode::from_str("US").unwrap())
+            );
+        } else {
+            println!("Warning: create data.csv to run all test.");
+        }
     }
 
     #[test]
@@ -488,13 +490,14 @@ mod test {
     fn region_v6() {
         use crate::Region;
 
-        let db_ip =
-            DbIp::<Region>::from_csv_file("./data.csv").expect("you must download data.csv");
-
-        assert_eq!(
-            db_ip.get_v6(&"2a07:7ec5:77a1::".parse().unwrap()),
-            Some(Region::Europe)
-        );
+        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./data.csv") {
+            assert_eq!(
+                db_ip.get_v6(&"2a07:7ec5:77a1::".parse().unwrap()),
+                Some(Region::Europe)
+            );
+        } else {
+            println!("Warning: create data.csv to run all test.");
+        }
     }
 
     #[test]

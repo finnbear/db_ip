@@ -11,10 +11,10 @@ You can use `DbIp<CountryCode>` to get the actual two-letter country code (this 
 ```rust
 use db_ip::{DbIp, CountryCode};
 
-let db_ip = DbIp::<CountryCode>::from_csv_file("./data.csv").expect("you must download data.csv");
+let db_ip = DbIp::<CountryCode>::from_csv_file("./test_data.csv").expect("you must download data.csv");
 
 assert_eq!(
-    db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
+    db_ip.get_v4(&"0.1.2.3".parse().unwrap()),
     Some(CountryCode::from_str("US").unwrap())
 );
 ```
@@ -24,10 +24,10 @@ You can use `DbIp<Region>`, enabled by the `region` feature, to gain a broad und
 ```rust
 use db_ip::{DbIp, Region};
 
-let db_ip = DbIp::<Region>::from_csv_file("./data.csv").expect("you must download data.csv");
+let db_ip = DbIp::<Region>::from_csv_file("./test_data.csv").expect("you must download data.csv");
 
 assert_eq!(
-    db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
+    db_ip.get_v4(&"0.1.2.3".parse().unwrap()),
     Some(Region::America)
 );
 ```
