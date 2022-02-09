@@ -10,7 +10,8 @@ Cargo.lock
 **/*.rs.bk
 
 # You must download a copy yourself.
-data.csv
+country_data.csv
+city_data.csv
 
 .idea
 *.iml

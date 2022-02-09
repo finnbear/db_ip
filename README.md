@@ -11,7 +11,7 @@ You can use `DbIp<CountryCode>` to get the actual two-letter country code (this 
 ```rust
 use db_ip::{DbIp, CountryCode};
 
-let db_ip = DbIp::<CountryCode>::from_csv_file("./test_data.csv").expect("you must download data.csv");
+let db_ip = DbIp::<CountryCode>::from_csv_file("./test_country_data.csv").expect("you must download country_data.csv");
 
 assert_eq!(
     db_ip.get_v4(&"0.1.2.3".parse().unwrap()),
@@ -24,7 +24,7 @@ You can use `DbIp<Region>`, enabled by the `region` feature, to gain a broad und
 ```rust
 use db_ip::{DbIp, Region};
 
-let db_ip = DbIp::<Region>::from_csv_file("./test_data.csv").expect("you must download data.csv");
+let db_ip = DbIp::<Region>::from_csv_file("./test_country_data.csv").expect("you must download country_data.csv");
 
 assert_eq!(
     db_ip.get_v4(&"0.1.2.3".parse().unwrap()),
@@ -37,9 +37,11 @@ City data records.
 
 ## Downloading IP Geolocation Data
 
-You must visit [db-ip](https://db-ip.com/db/download/ip-to-country-lite) to download the actual ip geolocation data.
+You must visit one of the following links to download the actual ip geolocation data (in CSV format).
 
-Make sure you select the Country (recommended) or City data in CSV format. The "lite" data is currently free, but subject to terms.
+- [Country data lite](https://db-ip.com/db/download/ip-to-country-lite) (recommended)
+- [City data lite](https://db-ip.com/db/download/ip-to-city-lite) (larger file size)
+- You may also try the paid versions, but they have not been tested with this crate
 
 ## Features
 

@@ -485,7 +485,7 @@ mod test {
     fn region_v4() {
         use crate::Region;
 
-        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./data.csv") {
+        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./country_data.csv") {
             /*
             let ser = bincode::serialize(&db_ip).unwrap();
             println!("{} {} {}", db_ip.len_v4(), db_ip.len_v6(), ser.len());
@@ -496,20 +496,35 @@ mod test {
                 Some(Region::America)
             );
         } else {
-            println!("Warning: create data.csv to run all test.");
+            println!("Warning: create country_data.csv to run all test.");
         }
     }
 
     #[test]
     #[cfg(all(feature = "ipv4", feature = "csv"))]
     fn country_code_v4() {
-        if let Ok(db_ip) = DbIp::<CountryCode>::from_csv_file("./data.csv") {
+        if let Ok(db_ip) = DbIp::<CountryCode>::from_csv_file("./country_data.csv") {
+            println!("country code length v4: {}", db_ip.len_v4());
             assert_eq!(
                 db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
                 Some(CountryCode::from_str("US").unwrap())
             );
         } else {
-            println!("Warning: create data.csv to run all test.");
+            println!("Warning: create country_data.csv to run all test.");
+        }
+    }
+
+    #[test]
+    #[cfg(all(feature = "ipv4", feature = "csv"))]
+    fn city_country_code_v4() {
+        if let Ok(db_ip) = DbIp::<CountryCode>::from_csv_file("./city_data.csv") {
+            println!("city country code length v4: {}", db_ip.len_v4());
+            assert_eq!(
+                db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
+                Some(CountryCode::from_str("US").unwrap())
+            );
+        } else {
+            println!("Warning: create country_data.csv to run all test.");
         }
     }
 
@@ -518,13 +533,13 @@ mod test {
     fn region_v6() {
         use crate::Region;
 
-        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./data.csv") {
+        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./country_data.csv") {
             assert_eq!(
                 db_ip.get_v6(&"2a07:7ec5:77a1::".parse().unwrap()),
                 Some(Region::Europe)
             );
         } else {
-            println!("Warning: create data.csv to run all test.");
+            println!("Warning: create country_data.csv to run all test.");
         }
     }
 
@@ -564,7 +579,7 @@ mod test {
     fn region_serde_bincode() {
         use crate::Region;
 
-        let db_ip = DbIp::<Region>::from_csv_file("./test_data.csv").unwrap();
+        let db_ip = DbIp::<Region>::from_csv_file("./test_country_data.csv").unwrap();
 
         let ser = bincode::serialize(&db_ip).unwrap();
         println!("region serde bincode size {}: {:?}", ser.len(), ser);
@@ -579,7 +594,7 @@ mod test {
     #[test]
     #[cfg(all(feature = "serde", feature = "ipv4", feature = "csv"))]
     fn country_code_serde_bincode() {
-        let db_ip = DbIp::<CountryCode>::from_csv_file("./test_data.csv").unwrap();
+        let db_ip = DbIp::<CountryCode>::from_csv_file("./test_country_data.csv").unwrap();
 
         let ser = bincode::serialize(&db_ip).unwrap();
         println!("country code serde bincode size {}: {:?}", ser.len(), ser);
@@ -601,7 +616,7 @@ mod test {
     fn region_serde_json_v4() {
         use crate::Region;
 
-        let db_ip = DbIp::<Region>::from_csv_file("./test_data.csv").unwrap();
+        let db_ip = DbIp::<Region>::from_csv_file("./test_country_data.csv").unwrap();
 
         let ser = serde_json::to_string(&db_ip).unwrap();
         println!("region serde json size {}: {}", ser.len(), ser);
@@ -616,7 +631,7 @@ mod test {
     #[test]
     #[cfg(all(feature = "serde", feature = "ipv4", feature = "csv"))]
     fn country_code_serde_json_v4() {
-        let db_ip = DbIp::<CountryCode>::from_csv_file("./test_data.csv").unwrap();
+        let db_ip = DbIp::<CountryCode>::from_csv_file("./test_country_data.csv").unwrap();
 
         let ser = serde_json::to_string(&db_ip).unwrap();
         println!("country code serde json size {}: {}", ser.len(), ser);
@@ -636,7 +651,7 @@ mod test {
         use crate::Region;
         use std::net::Ipv4Addr;
 
-        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./data.csv") {
+        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./country_data.csv") {
             let mut i = 0u32;
 
             b.iter(|| {
@@ -644,7 +659,7 @@ mod test {
                 i = i.wrapping_add(1).wrapping_mul(7);
             });
         } else {
-            println!("Warning: create data.csv to run all benchmarks.");
+            println!("Warning: create country_data.csv to run all benchmarks.");
         }
     }
 
@@ -656,7 +671,7 @@ mod test {
         use crate::Region;
         use std::net::Ipv6Addr;
 
-        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./data.csv") {
+        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./country_data.csv") {
             let mut i = 0u128;
 
             b.iter(|| {
@@ -664,7 +679,7 @@ mod test {
                 i = i.wrapping_add(1).wrapping_mul(7);
             });
         } else {
-            println!("Warning: create data.csv to run all benchmarks.");
+            println!("Warning: create country_data.csv to run all benchmarks.");
         }
     }
 }
