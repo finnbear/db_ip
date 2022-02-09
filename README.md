@@ -32,13 +32,14 @@ assert_eq!(
 );
 ```
 
-Finally, you can implement `IpData` yourself, to store any other type of data that is country-specific.
+Finally, you can implement `IpData` yourself, to store any other type of data that can be derived from Country or
+City data records.
 
 ## Downloading IP Geolocation Data
 
 You must visit [db-ip](https://db-ip.com/db/download/ip-to-country-lite) to download the actual ip geolocation data.
 
-Make sure you select the Country data in CSV format. The "lite" data is currently free, but subject to terms.
+Make sure you select the Country (recommended) or City data in CSV format. The "lite" data is currently free, but subject to terms.
 
 ## Features
 
@@ -52,10 +53,7 @@ Lookups are relatively speedy, taking less than 100ns in release mode.
 
 ## Limitations
 
-This crate currently only supports [db-ip.com](https://db-ip.com/) Country data, not City, ASN, location, etc.
-
-If you want access to one of those other types of data, create an issue. Adding support is possible,
-but would be a breaking-change for implementors of custom `IpData`.
+If you want easier access to data other than `CountryCode` and `Region`, create an issue.
 
 For now, the `region` feature will result in `serde` and `serde_json` being imported, due to [locale-codes](https://github.com/johnstonskj/locale-codes).
 

@@ -5,7 +5,10 @@ use std::convert::TryInto;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 #[allow(unused_imports)]
+use std::io::Read;
+#[allow(unused_imports)]
 use std::net::{AddrParseError, IpAddr, Ipv4Addr, Ipv6Addr};
+#[allow(unused_imports)]
 use std::str::FromStr;
 
 /// A map of ip range to data derived from a country code.
@@ -34,9 +37,9 @@ pub enum Error {
     AddrMismatch,
     AddrOutOfOrder,
     AddrParse(AddrParseError),
+    #[cfg(feature = "csv")]
     Csv(csv::Error),
-    IncompleteRecord,
-    InvalidCountryCode,
+    InvalidRecord,
 }
 
 /// Data associated with an ip address, derived from a [`CountryCode`].
@@ -45,8 +48,16 @@ pub enum Error {
 /// Example, if you mapped a country code to a boolean, the data structure will store very large
 /// ranges of true/false, consisting of multiple consecutive ranges in the original dataset.
 pub trait IpData: Copy + Clone + PartialEq {
-    /// db-ip data consists of country codes, any other information must be derived from them.
-    fn from_country_code(country_code: CountryCode) -> Option<Self>;
+    /// db-ip data consists of csv records, any data must be derived from then.
+    /// Should return [`Err(Error::InvalidRecord)`] if the fields are insufficient and the loading should
+    /// be aborted, and [`Ok(None)`] if the field is fine, but the data is irrelevant.
+    ///
+    /// # Notes
+    ///
+    /// - The first two indices are the begin and end of the ip range, respectively.
+    /// - You don't have to implement this if you disable the `csv` feature.
+    #[cfg(feature = "csv")]
+    fn from_record(record: &csv::StringRecord) -> Result<Option<Self>, Error>;
 }
 
 /// A two letter, uppercase country code.
@@ -92,8 +103,19 @@ impl Display for CountryCode {
 }
 
 impl IpData for CountryCode {
-    fn from_country_code(country_code: CountryCode) -> Option<Self> {
-        Some(country_code)
+    #[cfg(feature = "csv")]
+    fn from_record(record: &csv::StringRecord) -> Result<Option<Self>, Error> {
+        let idx = match record.len() {
+            // Country data
+            3 => 2,
+            // City data
+            8 => 3,
+            // Not present.
+            _ => return Err(Error::InvalidRecord),
+        };
+        let country_code_str = record.get(idx).ok_or(Error::InvalidRecord)?;
+        let country_code = CountryCode::from_str(country_code_str).ok_or(Error::InvalidRecord)?;
+        Ok(Some(country_code))
     }
 }
 
@@ -111,23 +133,25 @@ pub enum Region {
 
 #[cfg(feature = "region")]
 impl IpData for Region {
-    fn from_country_code(country_code: CountryCode) -> Option<Self> {
-        let country_info = locale_codes::country::lookup(country_code.as_str());
+    #[cfg(feature = "csv")]
+    fn from_record(record: &csv::StringRecord) -> Result<Option<Self>, Error> {
+        let country_code = CountryCode::from_record(record)?;
+        let country_info = country_code.and_then(|c| locale_codes::country::lookup(c.as_str()));
         let region_info = country_info
             .and_then(|c| c.region_code)
             .and_then(locale_codes::region::lookup);
-        if let Some(info) = region_info {
+        Ok(if let Some(info) = region_info {
             Some(match info.name.as_str() {
                 "Americas" => Self::America,
                 "Africa" => Self::Africa,
                 "Asia" => Self::Asia,
                 "Europe" => Self::Europe,
                 "Oceania" => Self::Oceania,
-                _ => return None,
+                _ => return Ok(None),
             })
         } else {
             None
-        }
+        })
     }
 }
 
@@ -188,11 +212,13 @@ impl<V: IpData> DbIp<V> {
     }
 
     /// Load from CSV file contained in string.
+    #[cfg(feature = "csv")]
     pub fn from_csv_str(csv: &str) -> Result<Self, Error> {
         Self::from_csv_reader(csv.as_bytes())
     }
 
     /// Load from CSV file reader.
+    #[cfg(feature = "csv")]
     pub fn from_csv_reader<R: Read>(reader: R) -> Result<Self, Error> {
         let reader = csv::ReaderBuilder::new()
             .has_headers(false)
@@ -202,6 +228,7 @@ impl<V: IpData> DbIp<V> {
     }
 
     /// Load from CSV file contained in file.
+    #[cfg(feature = "csv")]
     pub fn from_csv_file(path: &str) -> Result<Self, Error> {
         let reader = csv::ReaderBuilder::new()
             .has_headers(false)
@@ -211,6 +238,7 @@ impl<V: IpData> DbIp<V> {
         Self::from_csv_reader_inner(reader)
     }
 
+    #[cfg(feature = "csv")]
     fn from_csv_reader_inner<R: Read>(mut reader: csv::Reader<R>) -> Result<Self, Error> {
         let mut ret = Self {
             #[cfg(feature = "ipv4")]
@@ -236,11 +264,7 @@ impl<V: IpData> DbIp<V> {
         for record in reader.records() {
             let record = record.map_err(Error::Csv)?;
 
-            let country_code_str = record.get(2).ok_or(Error::IncompleteRecord)?;
-            let country_code =
-                CountryCode::from_str(country_code_str).ok_or(Error::InvalidCountryCode)?;
-
-            if let Some(value) = V::from_country_code(country_code) {
+            if let Some(value) = V::from_record(&record)? {
                 let begin = IpAddr::from_str(&record[0]).map_err(Error::AddrParse)?;
                 let end = IpAddr::from_str(&record[1]).map_err(Error::AddrParse)?;
 
@@ -448,6 +472,7 @@ fn ip_to_bytes(ip: IpAddr) -> Vec<u8> {
 mod test {
     #[cfg(feature = "nightly")]
     extern crate test;
+    #[allow(unused_imports)]
     use crate::{CountryCode, DbIp};
 
     #[test]
@@ -456,7 +481,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "region", feature = "ipv4"))]
+    #[cfg(all(feature = "region", feature = "ipv4", feature = "csv"))]
     fn region_v4() {
         use crate::Region;
 
@@ -476,7 +501,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "ipv4")]
+    #[cfg(all(feature = "ipv4", feature = "csv"))]
     fn country_code_v4() {
         if let Ok(db_ip) = DbIp::<CountryCode>::from_csv_file("./data.csv") {
             assert_eq!(
@@ -489,7 +514,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "region", feature = "ipv6"))]
+    #[cfg(all(feature = "region", feature = "ipv6", feature = "csv"))]
     fn region_v6() {
         use crate::Region;
 
@@ -530,7 +555,12 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "region", feature = "serde", feature = "ipv4"))]
+    #[cfg(all(
+        feature = "region",
+        feature = "serde",
+        feature = "ipv4",
+        feature = "csv"
+    ))]
     fn region_serde_bincode() {
         use crate::Region;
 
@@ -540,11 +570,14 @@ mod test {
         println!("region serde bincode size {}: {:?}", ser.len(), ser);
         let de: DbIp<Region> = bincode::deserialize(&ser).unwrap();
 
-        assert_eq!(de.get(&"1.0.0.0".parse().unwrap()), Some(Region::Oceania));
+        assert_eq!(
+            de.get_v4(&"1.0.0.0".parse().unwrap()),
+            Some(Region::Oceania)
+        );
     }
 
     #[test]
-    #[cfg(all(feature = "serde", feature = "ipv4"))]
+    #[cfg(all(feature = "serde", feature = "ipv4", feature = "csv"))]
     fn country_code_serde_bincode() {
         let db_ip = DbIp::<CountryCode>::from_csv_file("./test_data.csv").unwrap();
 
@@ -553,13 +586,18 @@ mod test {
         let de: DbIp<CountryCode> = bincode::deserialize(&ser).unwrap();
 
         assert_eq!(
-            de.get(&"1.0.0.0".parse().unwrap()),
+            de.get_v4(&"1.0.0.0".parse().unwrap()),
             Some(CountryCode::from_str("AU").unwrap())
         );
     }
 
     #[test]
-    #[cfg(all(feature = "region", feature = "serde", feature = "ipv4"))]
+    #[cfg(all(
+        feature = "region",
+        feature = "serde",
+        feature = "ipv4",
+        feature = "csv"
+    ))]
     fn region_serde_json_v4() {
         use crate::Region;
 
@@ -569,11 +607,14 @@ mod test {
         println!("region serde json size {}: {}", ser.len(), ser);
         let de: DbIp<Region> = serde_json::from_str(&ser).unwrap();
 
-        assert_eq!(de.get(&"1.0.0.0".parse().unwrap()), Some(Region::Oceania));
+        assert_eq!(
+            de.get_v4(&"1.0.0.0".parse().unwrap()),
+            Some(Region::Oceania)
+        );
     }
 
     #[test]
-    #[cfg(all(feature = "serde", feature = "ipv4"))]
+    #[cfg(all(feature = "serde", feature = "ipv4", feature = "csv"))]
     fn country_code_serde_json_v4() {
         let db_ip = DbIp::<CountryCode>::from_csv_file("./test_data.csv").unwrap();
 
@@ -582,14 +623,14 @@ mod test {
         let de: DbIp<CountryCode> = serde_json::from_str(&ser).unwrap();
 
         assert_eq!(
-            de.get(&"1.0.0.0".parse().unwrap()),
+            de.get_v4(&"1.0.0.0".parse().unwrap()),
             Some(CountryCode::from_str("AU").unwrap())
         );
     }
 
     // cargo bench --features nightly  -- bench_region_v4
     #[allow(soft_unstable)]
-    #[cfg(feature = "nightly")]
+    #[cfg(all(feature = "nightly", feature = "csv"))]
     #[bench]
     fn bench_region_v4(b: &mut test::Bencher) {
         use crate::Region;
@@ -609,7 +650,7 @@ mod test {
 
     // cargo bench --features nightly  -- bench_region_v6
     #[allow(soft_unstable)]
-    #[cfg(feature = "nightly")]
+    #[cfg(all(feature = "nightly", feature = "csv"))]
     #[bench]
     fn bench_region_v6(b: &mut test::Bencher) {
         use crate::Region;
@@ -628,6 +669,4 @@ mod test {
     }
 }
 
-use doc_comment::doctest;
-use std::io::Read;
-doctest!("../README.md");
+doc_comment::doctest!("../README.md");
