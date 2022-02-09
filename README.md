@@ -6,19 +6,6 @@ This library is not affiliated with or endorsed by [db-ip.com](https://db-ip.com
 
 ## Examples
 
-You can use `DbIp<Region>` to gain a broad understanding of an IP's location.
-
-```rust
-use db_ip::{DbIp, Region};
-
-let db_ip = DbIp::<Region>::from_csv_file("./data.csv").expect("you must download data.csv");
-
-assert_eq!(
-    db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
-    Some(Region::America)
-);
-```
-
 You can use `DbIp<CountryCode>` to get the actual two-letter country code (this takes more RAM to store).
 
 ```rust
@@ -29,6 +16,19 @@ let db_ip = DbIp::<CountryCode>::from_csv_file("./data.csv").expect("you must do
 assert_eq!(
     db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
     Some(CountryCode::from_str("US").unwrap())
+);
+```
+
+You can use `DbIp<Region>`, enabled by the `region` feature, to gain a broad understanding of an IP's location.
+
+```rust
+use db_ip::{DbIp, Region};
+
+let db_ip = DbIp::<Region>::from_csv_file("./data.csv").expect("you must download data.csv");
+
+assert_eq!(
+    db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
+    Some(Region::America)
 );
 ```
 
@@ -54,6 +54,8 @@ This crate currently only supports [db-ip.com](https://db-ip.com/) Country data,
 
 If you want access to one of those other types of data, create an issue. Adding support is possible,
 but would be a breaking-change for implementors of custom `IpData`.
+
+For now, the `region` feature will result in `serde` and `serde_json` being imported, due to [locale-codes](https://github.com/johnstonskj/locale-codes).
 
 ## License
 

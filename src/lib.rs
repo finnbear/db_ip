@@ -97,6 +97,7 @@ impl IpData for CountryCode {
 }
 
 /// A very broad region id, useful for high-level operations.
+#[cfg(feature = "region")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Region {
@@ -107,6 +108,7 @@ pub enum Region {
     Oceania,
 }
 
+#[cfg(feature = "region")]
 impl IpData for Region {
     fn from_country_code(country_code: CountryCode) -> Option<Self> {
         let country_info = locale_codes::country::lookup(country_code.as_str());
@@ -115,11 +117,11 @@ impl IpData for Region {
             .and_then(locale_codes::region::lookup);
         if let Some(info) = region_info {
             Some(match info.name.as_str() {
-                "Americas" => Region::America,
-                "Africa" => Region::Africa,
-                "Asia" => Region::Asia,
-                "Europe" => Region::Europe,
-                "Oceania" => Region::Oceania,
+                "Americas" => Self::America,
+                "Africa" => Self::Africa,
+                "Asia" => Self::Asia,
+                "Europe" => Self::Europe,
+                "Oceania" => Self::Oceania,
                 _ => return None,
             })
         } else {
@@ -443,7 +445,7 @@ fn ip_to_bytes(ip: IpAddr) -> Vec<u8> {
 #[cfg(test)]
 #[cfg(any(feature = "ipv4", feature = "ipv6"))]
 mod test {
-    use crate::{CountryCode, DbIp, Region};
+    use crate::{CountryCode, DbIp};
 
     #[test]
     fn country_code() {
@@ -451,8 +453,10 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "ipv4")]
+    #[cfg(all(feature = "region", feature = "ipv4"))]
     fn region_v4() {
+        use crate::Region;
+
         let db_ip =
             DbIp::<Region>::from_csv_file("./data.csv").expect("you must download data.csv");
 
@@ -480,8 +484,10 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "ipv6")]
+    #[cfg(all(feature = "region", feature = "ipv6"))]
     fn region_v6() {
+        use crate::Region;
+
         let db_ip =
             DbIp::<Region>::from_csv_file("./data.csv").expect("you must download data.csv");
 
@@ -518,8 +524,10 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "serde", feature = "ipv4"))]
+    #[cfg(all(feature = "region", feature = "serde", feature = "ipv4"))]
     fn region_serde_bincode() {
+        use crate::Region;
+
         let db_ip = DbIp::<Region>::from_csv_file("./test_data.csv").unwrap();
 
         let ser = bincode::serialize(&db_ip).unwrap();
@@ -545,8 +553,10 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "serde", feature = "ipv4"))]
+    #[cfg(all(feature = "region", feature = "serde", feature = "ipv4"))]
     fn region_serde_json_v4() {
+        use crate::Region;
+
         let db_ip = DbIp::<Region>::from_csv_file("./test_data.csv").unwrap();
 
         let ser = serde_json::to_string(&db_ip).unwrap();
