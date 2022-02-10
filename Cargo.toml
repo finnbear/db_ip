@@ -7,6 +7,15 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/db_ip/"
 description = "An (unofficial) Rust library for querying db-ip.com data"
 
+[lib]
+name = "db_ip"
+path = "src/lib.rs"
+
+[[bin]]
+name = "export_region_bincode"
+path = "src/export_region_bincode.rs"
+required-features = ["serde", "bincode"]
+
 [features]
 default = ["ipv4", "ipv6", "region", "csv"]
 region = ["db_ip_macros/region"]
@@ -17,9 +26,9 @@ nightly = ["db_ip_macros"]
 [dependencies]
 csv = {version = "1.1", optional = true}
 serde = {version = "1.0", features=["derive"], optional=true}
-bincode = {version = "1.3", optional=true}
 doc-comment = "0.3"
 db_ip_macros = {path = "db_ip_macros", optional = true}
+bincode = {version = "1.3", optional=true}
 
 [dev-dependencies]
 serde_json = "1.0"

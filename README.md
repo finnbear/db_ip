@@ -54,6 +54,26 @@ on by default.
 
 Lookups are relatively speedy, taking less than 100ns in release mode.
 
+If you want to embed the data into your Rust binary, you can do so efficiently with:
+```console
+cargo run --package db_ip --bin export_region_bincode --release --features serde,bincode -- country_data.csv db_ip_region.bin
+```
+
+You can then use the following macro:
+```rust
+#[cfg(all(feature = "region", feature = "serde", feature = "bincode", feature = "ipv4", feature = "csv"))]
+{
+    use db_ip::{Region, include_db_ip_region_bincode};
+
+    let db_ip = include_db_ip_region_bincode!("../db_ip_region.bin");
+
+    assert_eq!(
+        db_ip.get_v4(&"1.0.0.0".parse().unwrap()),
+        Some(Region::Oceania)
+    );
+}
+```
+
 ## Limitations
 
 If you want easier access to data other than `CountryCode` and `Region`, create an issue.

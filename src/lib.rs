@@ -453,6 +453,20 @@ fn ip_to_bytes(ip: IpAddr) -> Vec<u8> {
 }
  */
 
+#[cfg(all(feature = "serde", feature = "bincode", feature = "region"))]
+#[doc(hidden)]
+pub use bincode;
+
+#[macro_export]
+#[cfg(all(feature = "serde", feature = "bincode", feature = "region"))]
+macro_rules! include_db_ip_region_bincode {
+    ($path: expr) => {{
+        let db_ip: ::db_ip::DbIp<::db_ip::Region> =
+            ::db_ip::bincode::deserialize(include_bytes!($path)).unwrap();
+        db_ip
+    }};
+}
+
 #[cfg(test)]
 #[cfg(any(feature = "ipv4", feature = "ipv6"))]
 mod test {
@@ -623,21 +637,6 @@ mod test {
     #[test]
     #[cfg(all(feature = "serde", feature = "ipv4", feature = "csv"))]
     fn country_code_serde_json_v4() {
-        let db_ip = DbIp::<CountryCode>::from_csv_file("./test_country_data.csv").unwrap();
-
-        let ser = serde_json::to_string(&db_ip).unwrap();
-        println!("country code serde json size {}: {}", ser.len(), ser);
-        let de: DbIp<CountryCode> = serde_json::from_str(&ser).unwrap();
-
-        assert_eq!(
-            de.get_v4(&"1.0.0.0".parse().unwrap()),
-            Some(CountryCode::from_str("AU").unwrap())
-        );
-    }
-
-    #[test]
-    #[cfg(all(feature = "include", feature = "region", feature = "ipv4"))]
-    fn region_include_v4() {
         let db_ip = DbIp::<CountryCode>::from_csv_file("./test_country_data.csv").unwrap();
 
         let ser = serde_json::to_string(&db_ip).unwrap();
