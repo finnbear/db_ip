@@ -4,6 +4,10 @@ An (unofficial) library for querying [db-ip.com](https://db-ip.com/) CSV databas
 
 This library is not affiliated with or endorsed by [db-ip.com](https://db-ip.com/).
 
+Be advised that, by using this library with lite databases (such as the one downloaded
+automatically in the build step), you are subject [license terms](LICENSE-DBIP)
+(requiring attribution).
+
 ## Examples
 
 You can use `DbIpDatabase<CountryCode>` to get the actual two-letter country code (this takes more RAM to store).
@@ -11,10 +15,10 @@ You can use `DbIpDatabase<CountryCode>` to get the actual two-letter country cod
 ```rust
 use db_ip::{DbIpDatabase, CountryCode};
 
-let db_ip = DbIpDatabase::<CountryCode>::from_csv_file("./test_country_data.csv").expect("you must download country_data.csv");
+let db_ip = DbIpDatabase::<CountryCode>::from_country_lite().unwrap();
 
 assert_eq!(
-    db_ip.get_v4(&"0.1.2.3".parse().unwrap()),
+    db_ip.get(&"192.99.174.0".parse().unwrap()),
     Some(CountryCode::from_str("US").unwrap())
 );
 ```
@@ -24,10 +28,10 @@ You can use `DbIpDatabase<Region>`, enabled by the `region` feature, to gain a b
 ```rust
 use db_ip::{DbIpDatabase, Region};
 
-let db_ip = DbIpDatabase::<Region>::from_csv_file("./test_country_data.csv").expect("you must download country_data.csv");
+let db_ip = DbIpDatabase::<Region>::from_country_lite().unwrap();
 
 assert_eq!(
-    db_ip.get_v4(&"0.1.2.3".parse().unwrap()),
+    db_ip.get(&"192.99.174.0".parse().unwrap()),
     Some(Region::NorthAmerica)
 );
 ```
@@ -37,11 +41,12 @@ City data records.
 
 ## Downloading IP Geolocation Data
 
-You must visit one of the following links to download the actual ip geolocation data (in CSV format).
+You can download the actual ip geolocation data (in CSV format) in one of the following ways:
 
+- Use the default `download-country-lite` feature, which attempts to download the most recent available Country data
 - [Country data lite](https://db-ip.com/db/download/ip-to-country-lite) (recommended)
 - [City data lite](https://db-ip.com/db/download/ip-to-city-lite) (larger file size)
-- You may also try the paid versions, but they have not been tested with this crate
+- You may also try the paid database versions for better accuracy, but they have not been tested with this crate
 
 ## Features
 
@@ -82,7 +87,7 @@ keep the database up to date.
 
 ## License
 
-Licensed under either of
+Code licensed under either of
 
  * Apache License, Version 2.0
    ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
@@ -90,6 +95,8 @@ Licensed under either of
    ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
+
+Bundled/downloaded geolocation data licensed under
 
 ## Contribution
 

@@ -209,6 +209,11 @@ impl<V: IpData> DbIpDatabase<V> {
         Self::from_csv_reader_inner(reader)
     }
 
+    #[cfg(all(feature = "download-country-lite", feature = "csv"))]
+    pub fn from_country_lite() -> Result<Self, FromCsvError> {
+        Self::from_csv_file(&format!("{}/country_lite.csv", env!("CARGO_MANIFEST_DIR")))
+    }
+
     #[cfg(feature = "csv")]
     fn from_csv_reader_inner<R: Read>(mut reader: csv::Reader<R>) -> Result<Self, FromCsvError> {
         #[cfg(feature = "ipv4")]
@@ -502,11 +507,16 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "region", feature = "ipv4", feature = "csv"))]
+    #[cfg(all(
+        feature = "region",
+        feature = "ipv4",
+        feature = "csv",
+        feature = "download-country-lite"
+    ))]
     fn region_v4() {
         use crate::Region;
 
-        if let Ok(db_ip) = DbIpDatabase::<Region>::from_csv_file("./country_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<Region>::from_country_lite() {
             /*
             let ser = bincode::serialize(&db_ip).unwrap();
             println!("{} {} {}", db_ip.len_v4(), db_ip.len_v6(), ser.len());
@@ -522,9 +532,9 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "ipv4", feature = "csv"))]
+    #[cfg(all(feature = "ipv4", feature = "csv", feature = "download-country-lite"))]
     fn country_code_v4() {
-        if let Ok(db_ip) = DbIpDatabase::<CountryCode>::from_csv_file("./country_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<CountryCode>::from_country_lite() {
             println!("country code length v4: {}", db_ip.len_v4());
             assert_eq!(
                 db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
@@ -536,9 +546,9 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "ipv4", feature = "csv"))]
+    #[cfg(all(feature = "ipv4", feature = "csv", feature = "download-country-lite"))]
     fn city_country_code_v4() {
-        if let Ok(db_ip) = DbIpDatabase::<CountryCode>::from_csv_file("./city_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<CountryCode>::from_country_lite() {
             println!("city country code length v4: {}", db_ip.len_v4());
             assert_eq!(
                 db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
@@ -550,11 +560,16 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "region", feature = "ipv6", feature = "csv"))]
+    #[cfg(all(
+        feature = "region",
+        feature = "ipv6",
+        feature = "csv",
+        feature = "download-country-lite"
+    ))]
     fn region_v6() {
         use crate::Region;
 
-        if let Ok(db_ip) = DbIpDatabase::<Region>::from_csv_file("./country_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<Region>::from_country_lite() {
             assert_eq!(
                 db_ip.get_v6(&"2a07:7ec5:77a1::".parse().unwrap()),
                 Some(Region::Europe)
@@ -672,13 +687,17 @@ mod test {
 
     // cargo bench --features nightly  -- bench_region_v4
     #[allow(soft_unstable)]
-    #[cfg(all(feature = "nightly", feature = "csv"))]
+    #[cfg(all(
+        feature = "nightly",
+        feature = "csv",
+        feature = "download-country-lite"
+    ))]
     #[bench]
     fn bench_region_v4(b: &mut test::Bencher) {
         use crate::Region;
         use std::net::Ipv4Addr;
 
-        if let Ok(db_ip) = DbIpDatabase::<Region>::from_csv_file("./country_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<Region>::from_country_lite() {
             let mut i = 0u32;
 
             b.iter(|| {
@@ -692,13 +711,17 @@ mod test {
 
     // cargo bench --features nightly  -- bench_region_v6
     #[allow(soft_unstable)]
-    #[cfg(all(feature = "nightly", feature = "csv"))]
+    #[cfg(all(
+        feature = "nightly",
+        feature = "csv",
+        feature = "download-country-lite"
+    ))]
     #[bench]
     fn bench_region_v6(b: &mut test::Bencher) {
         use crate::Region;
         use std::net::Ipv6Addr;
 
-        if let Ok(db_ip) = DbIpDatabase::<Region>::from_csv_file("./country_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<Region>::from_country_lite() {
             let mut i = 0u128;
 
             b.iter(|| {

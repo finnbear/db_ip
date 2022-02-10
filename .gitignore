@@ -10,7 +10,7 @@ Cargo.lock
 **/*.rs.bk
 
 # You must download a copy yourself.
-country_data.csv
+country_lite.csv
 city_data.csv
 *.bin
 
