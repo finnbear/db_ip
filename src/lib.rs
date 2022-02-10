@@ -211,22 +211,10 @@ impl<V: IpData> DbIpDatabase<V> {
 
     #[cfg(feature = "csv")]
     fn from_csv_reader_inner<R: Read>(mut reader: csv::Reader<R>) -> Result<Self, FromCsvError> {
-        let mut ret = Self {
-            #[cfg(feature = "ipv4")]
-            v4: DbIpDatabaseInner::new(),
-            #[cfg(feature = "ipv6")]
-            v6: DbIpDatabaseInner::new(),
-        };
-
         #[cfg(feature = "ipv4")]
-        let mut next_start_v4 = 0u32;
-        #[cfg(feature = "ipv4")]
-        let mut done_v4 = false;
-
+        let mut v4 = DbIpDatabaseInnerBuilder::new();
         #[cfg(feature = "ipv6")]
-        let mut next_start_v6 = 0u128;
-        #[cfg(feature = "ipv6")]
-        let mut done_v6 = false;
+        let mut v6 = DbIpDatabaseInnerBuilder::new();
 
         for record in reader.records() {
             let record = record.map_err(FromCsvError::Csv)?;
@@ -237,83 +225,34 @@ impl<V: IpData> DbIpDatabase<V> {
 
                 match (begin, end) {
                     #[allow(unused_variables)]
-                    (IpAddr::V4(begin), IpAddr::V4(end)) => {
-                        #[cfg(feature = "ipv4")]
-                        {
-                            if done_v4 {
-                                return Err(FromCsvError::AddrOutOfOrder);
-                            }
+                    (IpAddr::V4(begin), IpAddr::V4(end)) =>
+                    #[cfg(feature = "ipv4")]
+                    {
+                        let begin_ne = ip_v4_to_ne(&begin);
+                        let end_ne = ip_v4_to_ne(&end);
 
-                            let begin_ne = ip_v4_to_ne(&begin);
-                            let end_ne = ip_v4_to_ne(&end);
-                            if begin_ne < next_start_v4 || begin_ne > end_ne {
-                                return Err(FromCsvError::AddrOutOfOrder);
-                            }
-                            if ret
-                                .v4
-                                .values
-                                .last()
-                                .map(|last| last != &Some(value))
-                                .unwrap_or(true)
-                            {
-                                if begin_ne > next_start_v4 {
-                                    // Gap of unknown values.
-                                    ret.v4.starts.push(next_start_v4);
-                                    ret.v4.values.push(None);
-                                    next_start_v4 = begin_ne;
-                                }
-                                ret.v4.starts.push(begin_ne);
-                                ret.v4.values.push(Some(value));
-                            }
-                            if let Some(nxt) = end_ne.checked_add(1) {
-                                next_start_v4 = nxt;
-                            } else {
-                                done_v4 = true;
-                            }
-                        }
+                        v4.push(begin_ne, end_ne, end_ne.checked_add(1), value)?;
                     }
                     #[allow(unused_variables)]
-                    (IpAddr::V6(begin), IpAddr::V6(end)) => {
-                        #[cfg(feature = "ipv6")]
-                        {
-                            if done_v6 {
-                                return Err(FromCsvError::AddrOutOfOrder);
-                            }
+                    (IpAddr::V6(begin), IpAddr::V6(end)) =>
+                    #[cfg(feature = "ipv6")]
+                    {
+                        let begin_ne = ip_v6_to_ne(&begin);
+                        let end_ne = ip_v6_to_ne(&end);
 
-                            let begin_ne = ip_v6_to_ne(&begin);
-                            let end_ne = ip_v6_to_ne(&end);
-                            if begin_ne < next_start_v6 || begin_ne > end_ne {
-                                return Err(FromCsvError::AddrOutOfOrder);
-                            }
-                            if ret
-                                .v6
-                                .values
-                                .last()
-                                .map(|last| last != &Some(value))
-                                .unwrap_or(true)
-                            {
-                                if begin_ne > next_start_v6 {
-                                    // Gap of unknown values.
-                                    ret.v6.starts.push(next_start_v6);
-                                    ret.v6.values.push(None);
-                                    next_start_v6 = begin_ne;
-                                }
-                                ret.v6.starts.push(begin_ne);
-                                ret.v6.values.push(Some(value));
-                            }
-                            if let Some(nxt) = end_ne.checked_add(1) {
-                                next_start_v6 = nxt;
-                            } else {
-                                done_v6 = true;
-                            }
-                        }
+                        v6.push(begin_ne, end_ne, end_ne.checked_add(1), value)?;
                     }
                     _ => return Err(FromCsvError::AddrMismatch),
                 }
             }
         }
 
-        Ok(ret)
+        Ok(Self {
+            #[cfg(feature = "ipv4")]
+            v4: v4.inner,
+            #[cfg(feature = "ipv6")]
+            v6: v6.inner,
+        })
     }
 }
 
@@ -354,6 +293,62 @@ impl<IP: Ord + Copy, V: IpData> DbIpDatabaseInner<IP, V> {
     /// How many IP ranges.
     fn len(&self) -> usize {
         self.values.len()
+    }
+}
+
+/// Helps build [`DbIpDatabaseInner`] from sorted CSV data.
+struct DbIpDatabaseInnerBuilder<IP, V> {
+    inner: DbIpDatabaseInner<IP, V>,
+    next: IP,
+    done: bool,
+}
+
+impl<IP: Ord + Copy + Default, V: IpData> DbIpDatabaseInnerBuilder<IP, V> {
+    pub fn new() -> Self {
+        Self {
+            inner: DbIpDatabaseInner::new(),
+            next: IP::default(),
+            done: false,
+        }
+    }
+
+    /// Adds one IP range.
+    pub fn push(
+        &mut self,
+        start: IP,
+        end: IP,
+        end_plus_one: Option<IP>,
+        value: V,
+    ) -> Result<(), FromCsvError> {
+        if self.done {
+            return Err(FromCsvError::AddrOutOfOrder);
+        }
+
+        if start < self.next || start > end {
+            return Err(FromCsvError::AddrOutOfOrder);
+        }
+        if self
+            .inner
+            .values
+            .last()
+            .map(|last| last != &Some(value))
+            .unwrap_or(true)
+        {
+            if start > self.next {
+                // Gap of unknown values.
+                self.inner.starts.push(self.next);
+                self.inner.values.push(None);
+                self.next = start;
+            }
+            self.inner.starts.push(start);
+            self.inner.values.push(Some(value));
+        }
+        if let Some(nxt) = end_plus_one {
+            self.next = nxt;
+        } else {
+            self.done = true;
+        }
+        Ok(())
     }
 }
 
