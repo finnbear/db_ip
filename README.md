@@ -10,7 +10,7 @@ automatically in the build step), you are subject [license terms](LICENSE-DBIP)
 
 ## Examples
 
-You can use `DbIpDatabase<CountryCode>` to get the actual two-letter country code (this takes more RAM to store).
+You can use `DbIpDatabase<CountryCode>` to get the actual two-letter country code.
 
 ```rust
 use db_ip::{DbIpDatabase, CountryCode};
@@ -24,6 +24,7 @@ assert_eq!(
 ```
 
 You can use `DbIpDatabase<Region>`, enabled by the `region` feature, to gain a broad understanding of an IP's location.
+Since there are fewer possibilities, this takes less RAM.
 
 ```rust
 use db_ip::{DbIpDatabase, Region};
