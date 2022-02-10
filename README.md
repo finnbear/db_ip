@@ -2,7 +2,8 @@
 
 An (unofficial) library for querying [db-ip.com](https://db-ip.com/) CSV data in safe Rust.
 
-This library is not affiliated with or endorsed by [db-ip.com](https://db-ip.com/).
+This library is not affiliated with or endorsed by [db-ip.com](https://db-ip.com/). It stores the
+geolocation data in memory, rather than using any API.
 
 ## Examples
 
