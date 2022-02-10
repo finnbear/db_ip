@@ -1,18 +1,17 @@
 # db_ip
 
-An (unofficial) library for querying [db-ip.com](https://db-ip.com/) CSV data in safe Rust.
+An (unofficial) library for querying [db-ip.com](https://db-ip.com/) CSV databases in safe Rust.
 
-This library is not affiliated with or endorsed by [db-ip.com](https://db-ip.com/). It stores the
-geolocation data in memory, rather than using any API.
+This library is not affiliated with or endorsed by [db-ip.com](https://db-ip.com/).
 
 ## Examples
 
-You can use `DbIp<CountryCode>` to get the actual two-letter country code (this takes more RAM to store).
+You can use `DbIpDatabase<CountryCode>` to get the actual two-letter country code (this takes more RAM to store).
 
 ```rust
-use db_ip::{DbIp, CountryCode};
+use db_ip::{DbIpDatabase, CountryCode};
 
-let db_ip = DbIp::<CountryCode>::from_csv_file("./test_country_data.csv").expect("you must download country_data.csv");
+let db_ip = DbIpDatabase::<CountryCode>::from_csv_file("./test_country_data.csv").expect("you must download country_data.csv");
 
 assert_eq!(
     db_ip.get_v4(&"0.1.2.3".parse().unwrap()),
@@ -20,12 +19,12 @@ assert_eq!(
 );
 ```
 
-You can use `DbIp<Region>`, enabled by the `region` feature, to gain a broad understanding of an IP's location.
+You can use `DbIpDatabase<Region>`, enabled by the `region` feature, to gain a broad understanding of an IP's location.
 
 ```rust
-use db_ip::{DbIp, Region};
+use db_ip::{DbIpDatabase, Region};
 
-let db_ip = DbIp::<Region>::from_csv_file("./test_country_data.csv").expect("you must download country_data.csv");
+let db_ip = DbIpDatabase::<Region>::from_csv_file("./test_country_data.csv").expect("you must download country_data.csv");
 
 assert_eq!(
     db_ip.get_v4(&"0.1.2.3".parse().unwrap()),
@@ -77,6 +76,9 @@ You can then use the following macro:
 ## Limitations
 
 If you want easier access to data other than `CountryCode` and `Region`, create an issue.
+
+The [db-ip.com](https://db-ip.com/) API is not currently supported, so it is difficult to
+keep the database up to date.
 
 ## License
 

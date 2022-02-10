@@ -1,4 +1,4 @@
-use db_ip::{DbIp, Region};
+use db_ip::{DbIpDatabase, Region};
 use std::convert::TryInto;
 use std::env;
 use std::fs::OpenOptions;
@@ -12,7 +12,7 @@ pub fn main() -> Result<(), String> {
         Err(_) => Err(format!(
             "expected two arguments, input path followed by output path"
         )),
-        Ok([input, output]) => match DbIp::<Region>::from_csv_file(&input) {
+        Ok([input, output]) => match DbIpDatabase::<Region>::from_csv_file(&input) {
             Err(e) => Err(format!("error: {:?}", e)),
             Ok(db_ip) => {
                 let ser = bincode::serialize(&db_ip).unwrap();

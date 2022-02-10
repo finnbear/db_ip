@@ -15,30 +15,27 @@ use std::str::FromStr;
 #[derive(Debug)]
 #[cfg(any(feature = "ipv4", feature = "ipv6"))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct DbIp<V> {
-    /// Sorted Ipv4 range starts, in native endian.
+pub struct DbIpDatabase<V> {
     #[cfg(feature = "ipv4")]
-    v4_starts: Vec<u32>,
-    /// Value associated with each ipv4 range.
-    #[cfg(feature = "ipv4")]
-    v4_values: Vec<Option<V>>,
-    /// Sorted Ipv6 range starts, in native endian.
+    v4: DbIpDatabaseInner<u32, V>,
     #[cfg(feature = "ipv6")]
-    v6_starts: Vec<u128>,
-    /// Value associated with each ipv6 range.
-    #[cfg(feature = "ipv6")]
-    v6_values: Vec<Option<V>>,
+    v6: DbIpDatabaseInner<u128, V>,
 }
 
-/// Errors that may arise when loading a [`DbIp`].
+/// Errors that may arise when loading a [`DbIpDatabase`] from CSV.
 #[derive(Debug)]
+#[cfg(feature = "csv")]
 #[non_exhaustive]
-pub enum Error {
+pub enum FromCsvError {
+    /// An address range must start and end as either Ipv4 or Ipv6.
     AddrMismatch,
+    /// Address ranges must be in ascending order. This will be raised if they aren't.
     AddrOutOfOrder,
+    /// Failed to parse an address.
     AddrParse(AddrParseError),
-    #[cfg(feature = "csv")]
+    /// CSV error.
     Csv(csv::Error),
+    /// CSV record was missing required data.
     InvalidRecord,
 }
 
@@ -56,8 +53,9 @@ pub trait IpData: Copy + Clone + PartialEq {
     ///
     /// - The first two indices are the begin and end of the ip range, respectively.
     /// - You don't have to implement this if you disable the `csv` feature.
+    /// - If you do implement it, you are responsible for knowing which indices correspond to which data.
     #[cfg(feature = "csv")]
-    fn from_record(record: &csv::StringRecord) -> Result<Option<Self>, Error>;
+    fn from_record(record: &csv::StringRecord) -> Result<Option<Self>, FromCsvError>;
 }
 
 /// A two letter, uppercase country code.
@@ -104,22 +102,24 @@ impl Display for CountryCode {
 
 impl IpData for CountryCode {
     #[cfg(feature = "csv")]
-    fn from_record(record: &csv::StringRecord) -> Result<Option<Self>, Error> {
+    fn from_record(record: &csv::StringRecord) -> Result<Option<Self>, FromCsvError> {
         let idx = match record.len() {
             // Country data
             3 => 2,
             // City data
             8 => 3,
             // Not present.
-            _ => return Err(Error::InvalidRecord),
+            _ => return Err(FromCsvError::InvalidRecord),
         };
-        let country_code_str = record.get(idx).ok_or(Error::InvalidRecord)?;
-        let country_code = CountryCode::from_str(country_code_str).ok_or(Error::InvalidRecord)?;
+        let country_code_str = record.get(idx).ok_or(FromCsvError::InvalidRecord)?;
+        let country_code =
+            CountryCode::from_str(country_code_str).ok_or(FromCsvError::InvalidRecord)?;
         Ok(Some(country_code))
     }
 }
 
-/// A very broad region id, useful for high-level operations.
+/// A very broad region id, useful for high-level operations. Roughly corresponds to populated
+/// continents.
 #[cfg(feature = "region")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -135,14 +135,14 @@ pub enum Region {
 #[cfg(feature = "region")]
 impl IpData for Region {
     #[cfg(feature = "csv")]
-    fn from_record(record: &csv::StringRecord) -> Result<Option<Self>, Error> {
+    fn from_record(record: &csv::StringRecord) -> Result<Option<Self>, FromCsvError> {
         let country_code = CountryCode::from_record(record)?;
         Ok(country_code.and_then(|cc| db_ip_macros::country_code_str_to_region!(cc.as_str())))
     }
 }
 
 #[cfg(any(feature = "ipv4", feature = "ipv6"))]
-impl<V: IpData> DbIp<V> {
+impl<V: IpData> DbIpDatabase<V> {
     /// Gets the value associated with an ip address, if any.
     #[cfg(all(feature = "ipv4", feature = "ipv6"))]
     pub fn get(&self, ip: &IpAddr) -> Option<V> {
@@ -155,28 +155,13 @@ impl<V: IpData> DbIp<V> {
     /// Gets the value associated with an Ipv4 address, if any.
     #[cfg(feature = "ipv4")]
     pub fn get_v4(&self, v4: &Ipv4Addr) -> Option<V> {
-        Self::lookup(&self.v4_starts, &self.v4_values, &ip_v4_to_ne(v4))
+        self.v4.lookup(&ip_v4_to_ne(v4))
     }
 
     /// Gets the value associated with an Ipv6 address, if any.
     #[cfg(feature = "ipv6")]
     pub fn get_v6(&self, v6: &Ipv6Addr) -> Option<V> {
-        Self::lookup(&self.v6_starts, &self.v6_values, &ip_v6_to_ne(v6))
-    }
-
-    fn lookup<START: Ord + Copy>(starts: &[START], values: &[Option<V>], ip: &START) -> Option<V> {
-        debug_assert_eq!(starts.len(), values.len());
-
-        match starts.binary_search(ip) {
-            Ok(idx) => values[idx],
-            Err(idx) => {
-                if starts.get(idx).map(|end| ip < end).unwrap_or(true) {
-                    values.get(idx - 1).copied().unwrap_or(None)
-                } else {
-                    None
-                }
-            }
-        }
+        self.v6.lookup(&ip_v6_to_ne(v6))
     }
 
     /// Returns number of ranges/values stored for both Ipv4 and Ipv6 addresses.
@@ -188,24 +173,24 @@ impl<V: IpData> DbIp<V> {
     /// Returns number of ranges/values stored for Ipv4 addresses.
     #[cfg(feature = "ipv4")]
     pub fn len_v4(&self) -> usize {
-        self.v4_starts.len()
+        self.v4.len()
     }
 
     /// Returns number of ranges/values stored for Ipv6 addresses.
     #[cfg(feature = "ipv6")]
     pub fn len_v6(&self) -> usize {
-        self.v6_values.len()
+        self.v6.len()
     }
 
     /// Load from CSV file contained in string.
     #[cfg(feature = "csv")]
-    pub fn from_csv_str(csv: &str) -> Result<Self, Error> {
+    pub fn from_csv_str(csv: &str) -> Result<Self, FromCsvError> {
         Self::from_csv_reader(csv.as_bytes())
     }
 
     /// Load from CSV file reader.
     #[cfg(feature = "csv")]
-    pub fn from_csv_reader<R: Read>(reader: R) -> Result<Self, Error> {
+    pub fn from_csv_reader<R: Read>(reader: R) -> Result<Self, FromCsvError> {
         let reader = csv::ReaderBuilder::new()
             .has_headers(false)
             .from_reader(reader);
@@ -215,26 +200,22 @@ impl<V: IpData> DbIp<V> {
 
     /// Load from CSV file contained in file.
     #[cfg(feature = "csv")]
-    pub fn from_csv_file(path: &str) -> Result<Self, Error> {
+    pub fn from_csv_file(path: &str) -> Result<Self, FromCsvError> {
         let reader = csv::ReaderBuilder::new()
             .has_headers(false)
             .from_path(path)
-            .map_err(Error::Csv)?;
+            .map_err(FromCsvError::Csv)?;
 
         Self::from_csv_reader_inner(reader)
     }
 
     #[cfg(feature = "csv")]
-    fn from_csv_reader_inner<R: Read>(mut reader: csv::Reader<R>) -> Result<Self, Error> {
+    fn from_csv_reader_inner<R: Read>(mut reader: csv::Reader<R>) -> Result<Self, FromCsvError> {
         let mut ret = Self {
             #[cfg(feature = "ipv4")]
-            v4_starts: Vec::new(),
-            #[cfg(feature = "ipv4")]
-            v4_values: Vec::new(),
+            v4: DbIpDatabaseInner::new(),
             #[cfg(feature = "ipv6")]
-            v6_starts: Vec::new(),
-            #[cfg(feature = "ipv6")]
-            v6_values: Vec::new(),
+            v6: DbIpDatabaseInner::new(),
         };
 
         #[cfg(feature = "ipv4")]
@@ -248,11 +229,11 @@ impl<V: IpData> DbIp<V> {
         let mut done_v6 = false;
 
         for record in reader.records() {
-            let record = record.map_err(Error::Csv)?;
+            let record = record.map_err(FromCsvError::Csv)?;
 
             if let Some(value) = V::from_record(&record)? {
-                let begin = IpAddr::from_str(&record[0]).map_err(Error::AddrParse)?;
-                let end = IpAddr::from_str(&record[1]).map_err(Error::AddrParse)?;
+                let begin = IpAddr::from_str(&record[0]).map_err(FromCsvError::AddrParse)?;
+                let end = IpAddr::from_str(&record[1]).map_err(FromCsvError::AddrParse)?;
 
                 match (begin, end) {
                     #[allow(unused_variables)]
@@ -260,28 +241,29 @@ impl<V: IpData> DbIp<V> {
                         #[cfg(feature = "ipv4")]
                         {
                             if done_v4 {
-                                return Err(Error::AddrOutOfOrder);
+                                return Err(FromCsvError::AddrOutOfOrder);
                             }
 
                             let begin_ne = ip_v4_to_ne(&begin);
                             let end_ne = ip_v4_to_ne(&end);
                             if begin_ne < next_start_v4 || begin_ne > end_ne {
-                                return Err(Error::AddrOutOfOrder);
+                                return Err(FromCsvError::AddrOutOfOrder);
                             }
                             if ret
-                                .v4_values
+                                .v4
+                                .values
                                 .last()
                                 .map(|last| last != &Some(value))
                                 .unwrap_or(true)
                             {
                                 if begin_ne > next_start_v4 {
                                     // Gap of unknown values.
-                                    ret.v4_starts.push(next_start_v4);
-                                    ret.v4_values.push(None);
+                                    ret.v4.starts.push(next_start_v4);
+                                    ret.v4.values.push(None);
                                     next_start_v4 = begin_ne;
                                 }
-                                ret.v4_starts.push(begin_ne);
-                                ret.v4_values.push(Some(value));
+                                ret.v4.starts.push(begin_ne);
+                                ret.v4.values.push(Some(value));
                             }
                             if let Some(nxt) = end_ne.checked_add(1) {
                                 next_start_v4 = nxt;
@@ -295,28 +277,29 @@ impl<V: IpData> DbIp<V> {
                         #[cfg(feature = "ipv6")]
                         {
                             if done_v6 {
-                                return Err(Error::AddrOutOfOrder);
+                                return Err(FromCsvError::AddrOutOfOrder);
                             }
 
                             let begin_ne = ip_v6_to_ne(&begin);
                             let end_ne = ip_v6_to_ne(&end);
                             if begin_ne < next_start_v6 || begin_ne > end_ne {
-                                return Err(Error::AddrOutOfOrder);
+                                return Err(FromCsvError::AddrOutOfOrder);
                             }
                             if ret
-                                .v6_values
+                                .v6
+                                .values
                                 .last()
                                 .map(|last| last != &Some(value))
                                 .unwrap_or(true)
                             {
                                 if begin_ne > next_start_v6 {
                                     // Gap of unknown values.
-                                    ret.v6_starts.push(next_start_v6);
-                                    ret.v6_values.push(None);
+                                    ret.v6.starts.push(next_start_v6);
+                                    ret.v6.values.push(None);
                                     next_start_v6 = begin_ne;
                                 }
-                                ret.v6_starts.push(begin_ne);
-                                ret.v6_values.push(Some(value));
+                                ret.v6.starts.push(begin_ne);
+                                ret.v6.values.push(Some(value));
                             }
                             if let Some(nxt) = end_ne.checked_add(1) {
                                 next_start_v6 = nxt;
@@ -325,12 +308,52 @@ impl<V: IpData> DbIp<V> {
                             }
                         }
                     }
-                    _ => return Err(Error::AddrMismatch),
+                    _ => return Err(FromCsvError::AddrMismatch),
                 }
             }
         }
 
         Ok(ret)
+    }
+}
+
+/// Stores either Ipv4 or Ipv6 addresses/values.
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+struct DbIpDatabaseInner<IP, V> {
+    /// Sorted address range starts, in native endian.
+    starts: Vec<IP>,
+    /// Value associated with each address range.
+    values: Vec<Option<V>>,
+}
+
+impl<IP: Ord + Copy, V: IpData> DbIpDatabaseInner<IP, V> {
+    fn new() -> Self {
+        Self {
+            starts: Vec::new(),
+            values: Vec::new(),
+        }
+    }
+
+    /// Lookup value associated with native endian IP address, based on range.
+    fn lookup(&self, ip: &IP) -> Option<V> {
+        debug_assert_eq!(self.starts.len(), self.values.len());
+
+        match self.starts.binary_search(ip) {
+            Ok(idx) => self.values[idx],
+            Err(idx) => {
+                if self.starts.get(idx).map(|end| ip < end).unwrap_or(true) {
+                    self.values.get(idx - 1).copied().unwrap_or(None)
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    /// How many IP ranges.
+    fn len(&self) -> usize {
+        self.values.len()
     }
 }
 
@@ -461,7 +484,7 @@ pub use bincode;
 #[cfg(all(feature = "serde", feature = "bincode", feature = "region"))]
 macro_rules! include_db_ip_region_bincode {
     ($path: expr) => {{
-        let db_ip: ::db_ip::DbIp<::db_ip::Region> =
+        let db_ip: ::db_ip::DbIpDatabase<::db_ip::Region> =
             ::db_ip::bincode::deserialize(include_bytes!($path)).unwrap();
         db_ip
     }};
@@ -473,7 +496,7 @@ mod test {
     #[cfg(feature = "nightly")]
     extern crate test;
     #[allow(unused_imports)]
-    use crate::{CountryCode, DbIp};
+    use crate::{CountryCode, DbIpDatabase};
 
     #[test]
     fn country_code() {
@@ -485,7 +508,7 @@ mod test {
     fn region_v4() {
         use crate::Region;
 
-        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./country_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<Region>::from_csv_file("./country_data.csv") {
             /*
             let ser = bincode::serialize(&db_ip).unwrap();
             println!("{} {} {}", db_ip.len_v4(), db_ip.len_v6(), ser.len());
@@ -503,7 +526,7 @@ mod test {
     #[test]
     #[cfg(all(feature = "ipv4", feature = "csv"))]
     fn country_code_v4() {
-        if let Ok(db_ip) = DbIp::<CountryCode>::from_csv_file("./country_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<CountryCode>::from_csv_file("./country_data.csv") {
             println!("country code length v4: {}", db_ip.len_v4());
             assert_eq!(
                 db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
@@ -517,7 +540,7 @@ mod test {
     #[test]
     #[cfg(all(feature = "ipv4", feature = "csv"))]
     fn city_country_code_v4() {
-        if let Ok(db_ip) = DbIp::<CountryCode>::from_csv_file("./city_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<CountryCode>::from_csv_file("./city_data.csv") {
             println!("city country code length v4: {}", db_ip.len_v4());
             assert_eq!(
                 db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
@@ -533,7 +556,7 @@ mod test {
     fn region_v6() {
         use crate::Region;
 
-        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./country_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<Region>::from_csv_file("./country_data.csv") {
             assert_eq!(
                 db_ip.get_v6(&"2a07:7ec5:77a1::".parse().unwrap()),
                 Some(Region::Europe)
@@ -580,11 +603,11 @@ mod test {
     fn region_serde_bincode() {
         use crate::Region;
 
-        let db_ip = DbIp::<Region>::from_csv_file("./test_country_data.csv").unwrap();
+        let db_ip = DbIpDatabase::<Region>::from_csv_file("./test_country_data.csv").unwrap();
 
         let ser = bincode::serialize(&db_ip).unwrap();
         println!("region serde bincode size {}: {:?}", ser.len(), ser);
-        let de: DbIp<Region> = bincode::deserialize(&ser).unwrap();
+        let de: DbIpDatabase<Region> = bincode::deserialize(&ser).unwrap();
 
         assert_eq!(
             de.get_v4(&"1.0.0.0".parse().unwrap()),
@@ -600,11 +623,11 @@ mod test {
         feature = "csv"
     ))]
     fn country_code_serde_bincode() {
-        let db_ip = DbIp::<CountryCode>::from_csv_file("./test_country_data.csv").unwrap();
+        let db_ip = DbIpDatabase::<CountryCode>::from_csv_file("./test_country_data.csv").unwrap();
 
         let ser = bincode::serialize(&db_ip).unwrap();
         println!("country code serde bincode size {}: {:?}", ser.len(), ser);
-        let de: DbIp<CountryCode> = bincode::deserialize(&ser).unwrap();
+        let de: DbIpDatabase<CountryCode> = bincode::deserialize(&ser).unwrap();
 
         assert_eq!(
             de.get_v4(&"1.0.0.0".parse().unwrap()),
@@ -622,11 +645,11 @@ mod test {
     fn region_serde_json_v4() {
         use crate::Region;
 
-        let db_ip = DbIp::<Region>::from_csv_file("./test_country_data.csv").unwrap();
+        let db_ip = DbIpDatabase::<Region>::from_csv_file("./test_country_data.csv").unwrap();
 
         let ser = serde_json::to_string(&db_ip).unwrap();
         println!("region serde json size {}: {}", ser.len(), ser);
-        let de: DbIp<Region> = serde_json::from_str(&ser).unwrap();
+        let de: DbIpDatabase<Region> = serde_json::from_str(&ser).unwrap();
 
         assert_eq!(
             de.get_v4(&"1.0.0.0".parse().unwrap()),
@@ -637,11 +660,11 @@ mod test {
     #[test]
     #[cfg(all(feature = "serde", feature = "ipv4", feature = "csv"))]
     fn country_code_serde_json_v4() {
-        let db_ip = DbIp::<CountryCode>::from_csv_file("./test_country_data.csv").unwrap();
+        let db_ip = DbIpDatabase::<CountryCode>::from_csv_file("./test_country_data.csv").unwrap();
 
         let ser = serde_json::to_string(&db_ip).unwrap();
         println!("country code serde json size {}: {}", ser.len(), ser);
-        let de: DbIp<CountryCode> = serde_json::from_str(&ser).unwrap();
+        let de: DbIpDatabase<CountryCode> = serde_json::from_str(&ser).unwrap();
 
         assert_eq!(
             de.get_v4(&"1.0.0.0".parse().unwrap()),
@@ -657,7 +680,7 @@ mod test {
         use crate::Region;
         use std::net::Ipv4Addr;
 
-        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./country_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<Region>::from_csv_file("./country_data.csv") {
             let mut i = 0u32;
 
             b.iter(|| {
@@ -677,7 +700,7 @@ mod test {
         use crate::Region;
         use std::net::Ipv6Addr;
 
-        if let Ok(db_ip) = DbIp::<Region>::from_csv_file("./country_data.csv") {
+        if let Ok(db_ip) = DbIpDatabase::<Region>::from_csv_file("./country_data.csv") {
             let mut i = 0u128;
 
             b.iter(|| {
