@@ -8,9 +8,8 @@ repository = "https://github.com/finnbear/db_ip/"
 description = "An (unofficial) Rust library for querying db-ip.com data"
 
 [features]
-default = ["ipv4", "ipv6", "region", "continent", "csv"]
+default = ["ipv4", "ipv6", "region", "csv"]
 region = ["db_ip_macros/region"]
-continent = []
 ipv4 = []
 ipv6 = []
 nightly = ["db_ip_macros"]
