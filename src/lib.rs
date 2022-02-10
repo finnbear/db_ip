@@ -223,26 +223,26 @@ impl<V: IpData> DbIpDatabase<V> {
                 let begin = IpAddr::from_str(&record[0]).map_err(FromCsvError::AddrParse)?;
                 let end = IpAddr::from_str(&record[1]).map_err(FromCsvError::AddrParse)?;
 
+                if begin.is_ipv4() != end.is_ipv4() {
+                    return Err(FromCsvError::AddrMismatch);
+                }
+
                 match (begin, end) {
-                    #[allow(unused_variables)]
-                    (IpAddr::V4(begin), IpAddr::V4(end)) =>
                     #[cfg(feature = "ipv4")]
-                    {
+                    (IpAddr::V4(begin), IpAddr::V4(end)) => {
                         let begin_ne = ip_v4_to_ne(&begin);
                         let end_ne = ip_v4_to_ne(&end);
 
                         v4.push(begin_ne, end_ne, end_ne.checked_add(1), value)?;
                     }
-                    #[allow(unused_variables)]
-                    (IpAddr::V6(begin), IpAddr::V6(end)) =>
                     #[cfg(feature = "ipv6")]
-                    {
+                    (IpAddr::V6(begin), IpAddr::V6(end)) => {
                         let begin_ne = ip_v6_to_ne(&begin);
                         let end_ne = ip_v6_to_ne(&end);
 
                         v6.push(begin_ne, end_ne, end_ne.checked_add(1), value)?;
                     }
-                    _ => return Err(FromCsvError::AddrMismatch),
+                    _ => {}
                 }
             }
         }
@@ -267,6 +267,7 @@ struct DbIpDatabaseInner<IP, V> {
 }
 
 impl<IP: Ord + Copy, V: IpData> DbIpDatabaseInner<IP, V> {
+    #[cfg(feature = "csv")]
     fn new() -> Self {
         Self {
             starts: Vec::new(),
@@ -297,12 +298,14 @@ impl<IP: Ord + Copy, V: IpData> DbIpDatabaseInner<IP, V> {
 }
 
 /// Helps build [`DbIpDatabaseInner`] from sorted CSV data.
+#[cfg(feature = "csv")]
 struct DbIpDatabaseInnerBuilder<IP, V> {
     inner: DbIpDatabaseInner<IP, V>,
     next: IP,
     done: bool,
 }
 
+#[cfg(feature = "csv")]
 impl<IP: Ord + Copy + Default, V: IpData> DbIpDatabaseInnerBuilder<IP, V> {
     pub fn new() -> Self {
         Self {
