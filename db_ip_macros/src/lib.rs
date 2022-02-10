@@ -31,6 +31,7 @@ pub fn country_code_str_to_region(stream: TokenStream) -> TokenStream {
 #[cfg(feature = "region")]
 struct RegionFromCountryCodeStr(String, String);
 
+#[cfg(feature = "region")]
 impl RegionFromCountryCodeStr {
     pub fn new(mut country_code: &str, mut region_name: &str) -> Self {
         // Workaround: https://github.com/johnstonskj/locale-codes/issues/3
