@@ -1,6 +1,7 @@
 fn main() -> Result<(), &'static str> {
     #[cfg(feature = "download-country-lite")]
     {
+        use std::env;
         use chrono::{Datelike, Duration, TimeZone, Utc};
         use flate2::bufread::GzDecoder;
         use std::fs;
@@ -32,7 +33,7 @@ fn main() -> Result<(), &'static str> {
                 year, month
             );
             let expiry = Utc.ymd(year, month, 1).and_hms(0, 0, 0);
-            let res = download_file(&url, "country_lite.csv", Some(SystemTime::from(expiry)));
+            let res = download_file(&url, &format!("{}/country_lite.csv", env::var("OUT_DIR").unwrap()), Some(SystemTime::from(expiry)));
             match res {
                 Ok(downloaded) => {
                     if downloaded {

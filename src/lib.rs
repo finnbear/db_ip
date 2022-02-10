@@ -211,7 +211,7 @@ impl<V: IpData> DbIpDatabase<V> {
 
     #[cfg(all(feature = "download-country-lite", feature = "csv"))]
     pub fn from_country_lite() -> Result<Self, FromCsvError> {
-        Self::from_csv_file(&format!("{}/country_lite.csv", env!("CARGO_MANIFEST_DIR")))
+        Self::from_csv_file(&format!("{}/country_lite.csv", env!("OUT_DIR")))
     }
 
     #[cfg(feature = "csv")]
