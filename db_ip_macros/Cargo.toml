@@ -1,0 +1,19 @@
+[package]
+name = "db_ip_macros"
+authors = ["Finn Bear"]
+version = "0.1.0"
+edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Macros for db_ip"
+
+[lib]
+proc-macro = true
+
+[features]
+region = []
+
+[dependencies]
+syn = "1.0"
+quote = "1.0"
+proc-macro2 = "1.0"
+locale-codes = "0.3"

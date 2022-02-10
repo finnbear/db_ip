@@ -28,7 +28,7 @@ let db_ip = DbIp::<Region>::from_csv_file("./test_country_data.csv").expect("you
 
 assert_eq!(
     db_ip.get_v4(&"0.1.2.3".parse().unwrap()),
-    Some(Region::America)
+    Some(Region::NorthAmerica)
 );
 ```
 
@@ -56,8 +56,6 @@ Lookups are relatively speedy, taking less than 100ns in release mode.
 ## Limitations
 
 If you want easier access to data other than `CountryCode` and `Region`, create an issue.
-
-For now, the `region` feature will result in `serde` and `serde_json` being imported, due to [locale-codes](https://github.com/johnstonskj/locale-codes).
 
 ## License
 

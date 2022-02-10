@@ -125,10 +125,11 @@ impl IpData for CountryCode {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Region {
     Africa,
-    America,
     Asia,
     Europe,
+    NorthAmerica,
     Oceania,
+    SouthAmerica,
 }
 
 #[cfg(feature = "region")]
@@ -136,22 +137,7 @@ impl IpData for Region {
     #[cfg(feature = "csv")]
     fn from_record(record: &csv::StringRecord) -> Result<Option<Self>, Error> {
         let country_code = CountryCode::from_record(record)?;
-        let country_info = country_code.and_then(|c| locale_codes::country::lookup(c.as_str()));
-        let region_info = country_info
-            .and_then(|c| c.region_code)
-            .and_then(locale_codes::region::lookup);
-        Ok(if let Some(info) = region_info {
-            Some(match info.name.as_str() {
-                "Americas" => Self::America,
-                "Africa" => Self::Africa,
-                "Asia" => Self::Asia,
-                "Europe" => Self::Europe,
-                "Oceania" => Self::Oceania,
-                _ => return Ok(None),
-            })
-        } else {
-            None
-        })
+        Ok(country_code.and_then(|cc| db_ip_macros::country_code_str_to_region!(cc.as_str())))
     }
 }
 
@@ -439,7 +425,7 @@ impl Region {
     fn to_u8(self) -> u8 {
         match self {
             Region::Africa => 0,
-            Region::America => 1,
+            Region::NorthAmerica => 1,
             Region::Asia => 2,
             Region::Europe => 3,
             Region::Oceania => 4,
@@ -449,7 +435,7 @@ impl Region {
     fn from_u8(num: u8) -> Self {
         match num {
             0 => Region::Africa,
-            1 => Region::America,
+            1 => Region::NorthAmerica,
             2 => Region::Asia,
             3 => Region::Europe,
             4 => Region::Oceania,
@@ -493,7 +479,7 @@ mod test {
 
             assert_eq!(
                 db_ip.get_v4(&"94.250.200.0".parse().unwrap()),
-                Some(Region::America)
+                Some(Region::NorthAmerica)
             );
         } else {
             println!("Warning: create country_data.csv to run all test.");
@@ -573,6 +559,7 @@ mod test {
     #[cfg(all(
         feature = "region",
         feature = "serde",
+        feature = "bincode",
         feature = "ipv4",
         feature = "csv"
     ))]
@@ -592,7 +579,12 @@ mod test {
     }
 
     #[test]
-    #[cfg(all(feature = "serde", feature = "ipv4", feature = "csv"))]
+    #[cfg(all(
+        feature = "serde",
+        feature = "bincode",
+        feature = "ipv4",
+        feature = "csv"
+    ))]
     fn country_code_serde_bincode() {
         let db_ip = DbIp::<CountryCode>::from_csv_file("./test_country_data.csv").unwrap();
 
@@ -631,6 +623,21 @@ mod test {
     #[test]
     #[cfg(all(feature = "serde", feature = "ipv4", feature = "csv"))]
     fn country_code_serde_json_v4() {
+        let db_ip = DbIp::<CountryCode>::from_csv_file("./test_country_data.csv").unwrap();
+
+        let ser = serde_json::to_string(&db_ip).unwrap();
+        println!("country code serde json size {}: {}", ser.len(), ser);
+        let de: DbIp<CountryCode> = serde_json::from_str(&ser).unwrap();
+
+        assert_eq!(
+            de.get_v4(&"1.0.0.0".parse().unwrap()),
+            Some(CountryCode::from_str("AU").unwrap())
+        );
+    }
+
+    #[test]
+    #[cfg(all(feature = "include", feature = "region", feature = "ipv4"))]
+    fn region_include_v4() {
         let db_ip = DbIp::<CountryCode>::from_csv_file("./test_country_data.csv").unwrap();
 
         let ser = serde_json::to_string(&db_ip).unwrap();
