@@ -5,7 +5,7 @@ An (unofficial) library for querying [db-ip.com](https://db-ip.com/) CSV databas
 This library is not affiliated with or endorsed by [db-ip.com](https://db-ip.com/).
 
 Be advised that, by using this library with lite databases (such as the one downloaded
-automatically in the build step), you are subject [license terms](LICENSE-DBIP)
+automatically in the build step), you are subject to [license terms](LICENSE-DBIP)
 (requiring attribution).
 
 ## Examples
