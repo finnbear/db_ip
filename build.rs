@@ -84,7 +84,7 @@ fn main() -> Result<(), &'static str> {
         let csv_path = format!("{}/country_lite.csv", env::var("OUT_DIR").unwrap());
         if download_region_lite(&csv_path).is_ok() {
             #[cfg(any(feature = "include-region-lite", feature = "include-country-code-lite"))]
-            fn compress_lite<V: db_ip_core::IpData + serde::Serialize>(
+            fn compress_lite<V: db_ip_core::IpData + serde_1::Serialize>(
                 csv_path: &str,
                 region_path: &str,
             ) -> Result<(), String> {
