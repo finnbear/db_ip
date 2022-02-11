@@ -473,10 +473,6 @@ fn ip_to_bytes(ip: IpAddr) -> Vec<u8> {
 }
  */
 
-#[cfg(feature = "bincode")]
-#[doc(hidden)]
-pub use bincode;
-
 #[cfg(test)]
 mod test {
     #[allow(unused_imports)]

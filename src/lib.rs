@@ -3,16 +3,25 @@
 
 pub use db_ip_core::*;
 
+#[cfg(feature = "bincode")]
+#[doc(hidden)]
+pub use bincode;
+
+#[cfg(feature = "include-region-lite")]
+#[doc(hidden)]
+pub const REGION_LITE_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/region_lite.bin"));
+
+#[cfg(feature = "include-country-code-lite")]
+#[doc(hidden)]
+pub const COUNTRY_CODE_LITE_BYTES: &[u8] =
+    include_bytes!(concat!(env!("OUT_DIR"), "/country_code_lite.bin"));
+
 #[macro_export]
 #[cfg(feature = "include-region-lite")]
 macro_rules! include_region_database {
     () => {{
-        let db: ::db_ip_core::DbIpDatabase<::db_ip_core::Region> =
-            ::db_ip_core::bincode::deserialize(include_bytes!(concat!(
-                env!("OUT_DIR"),
-                "/region_lite.bin"
-            )))
-            .unwrap();
+        let db: $crate::DbIpDatabase<$crate::Region> =
+            $crate::bincode::deserialize($crate::REGION_LITE_BYTES).unwrap();
         db
     }};
 }
@@ -21,12 +30,8 @@ macro_rules! include_region_database {
 #[cfg(feature = "include-country-code-lite")]
 macro_rules! include_country_code_database {
     () => {{
-        let db: ::db_ip_core::DbIpDatabase<::db_ip_core::CountryCode> =
-            ::db_ip_core::bincode::deserialize(include_bytes!(concat!(
-                env!("OUT_DIR"),
-                "/country_code_lite.bin"
-            )))
-            .unwrap();
+        let db: $crate::DbIpDatabase<$crate::CountryCode> =
+            $crate::bincode::deserialize($crate::COUNTRY_CODE_LITE_BYTES).unwrap();
         db
     }};
 }
