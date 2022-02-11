@@ -10,29 +10,30 @@ automatically in the build step), you are subject [license terms](LICENSE-DBIP)
 
 ## Examples
 
-You can use `DbIpDatabase<CountryCode>` to get the actual two-letter country code.
+You can use `DbIpDatabase<CountryCode>` to get the actual two-letter country code. The country code database will be
+embedded, in a compressed form, in your Rust binary.
 
 ```rust
-use db_ip::{DbIpDatabase, CountryCode};
+use db_ip::{DbIpDatabase, CountryCode, include_country_code_database};
 
-let db_ip = DbIpDatabase::<CountryCode>::from_country_lite().unwrap();
+let db = include_country_code_database!();
 
 assert_eq!(
-    db_ip.get(&"192.99.174.0".parse().unwrap()),
+    db.get(&"192.99.174.0".parse().unwrap()),
     Some(CountryCode::from_str("US").unwrap())
 );
 ```
 
 You can use `DbIpDatabase<Region>`, enabled by the `region` feature, to gain a broad understanding of an IP's location.
-Since there are fewer possibilities, this takes less RAM.
+Since there are fewer possibilities, this takes less binary size and RAM.
 
 ```rust
-use db_ip::{DbIpDatabase, Region};
+use db_ip::{DbIpDatabase, Region, include_region_database};
 
-let db_ip = DbIpDatabase::<Region>::from_country_lite().unwrap();
+let db = include_region_database!();
 
 assert_eq!(
-    db_ip.get(&"192.99.174.0".parse().unwrap()),
+    db.get(&"192.99.174.0".parse().unwrap()),
     Some(Region::NorthAmerica)
 );
 ```
@@ -42,12 +43,14 @@ City data records.
 
 ## Downloading IP Geolocation Data
 
-You can download the actual ip geolocation data (in CSV format) in one of the following ways:
+You can manually download the actual ip geolocation data (in CSV format) in one of the following ways.
 
-- Use the default `download-country-lite` feature, which attempts to download the most recent available Country data
+- Use the default `download-country-lite` feature, which attempts to download the most recent available Country lite data
 - [Country data lite](https://db-ip.com/db/download/ip-to-country-lite) (recommended)
 - [City data lite](https://db-ip.com/db/download/ip-to-city-lite) (larger file size)
 - You may also try the paid database versions for better accuracy, but they have not been tested with this crate
+
+Once you have downloaded a CSV file, use the `csv` feature to load it.
 
 ## Features
 
@@ -58,26 +61,6 @@ You can selectively disable the `ipv4` and `ipv6` features, depending on your ne
 on by default.
 
 Lookups are relatively speedy, taking less than 100ns in release mode.
-
-If you want to embed the data into your Rust binary, you can do so efficiently with:
-```console
-cargo run --package db_ip --bin export_region_bincode --release --features serde,bincode -- country_data.csv db_ip_region.bin
-```
-
-You can then use the following macro:
-```rust
-#[cfg(all(feature = "region", feature = "serde", feature = "bincode", feature = "ipv4", feature = "csv"))]
-{
-    use db_ip::{Region, include_db_ip_region_bincode};
-
-    let db_ip = include_db_ip_region_bincode!("../db_ip_region.bin");
-
-    assert_eq!(
-        db_ip.get_v4(&"1.0.0.0".parse().unwrap()),
-        Some(Region::Oceania)
-    );
-}
-```
 
 ## Limitations
 
@@ -97,7 +80,7 @@ Code licensed under either of
 
 at your option.
 
-Bundled/downloaded geolocation data licensed under
+Bundled/downloaded geolocation data licensed under [LICENSE-DBIP](LICENSE-DBIP).
 
 ## Contribution
 

@@ -1,35 +1,28 @@
 [package]
 name = "db_ip"
 authors = ["Finn Bear"]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2018"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/db_ip/"
 description = "An (unofficial) Rust library for querying db-ip.com data"
 
-[lib]
-name = "db_ip"
-path = "src/lib.rs"
-
-[[bin]]
-name = "export_region_bincode"
-path = "src/export_region_bincode.rs"
-required-features = ["serde", "bincode"]
-
 [features]
-default = ["ipv4", "ipv6", "region", "csv", "download-country-lite"]
-region = ["db_ip_macros/region"]
-ipv4 = []
-ipv6 = []
-nightly = ["db_ip_macros"]
-download-country-lite = ["chrono", "flate2", "reqwest"]
+default = ["ipv4", "ipv6", "download-country-lite", "include-country-code-lite", "include-region-lite"]
+region = ["db_ip_core/region"]
+ipv4 = ["db_ip_core/ipv4"]
+ipv6 = ["db_ip_core/ipv6"]
+nightly = []
+download-country-lite = ["chrono", "flate2", "reqwest", "bincode"]
+include-country-code-lite = ["download-country-lite", "serde", "db_ip_core/bincode"]
+include-region-lite = ["download-country-lite", "region", "serde", "db_ip_core/bincode"]
 
 [dependencies]
 csv = {version = "1.1", optional = true}
 serde = {version = "1.0", features=["derive"], optional=true}
 doc-comment = "0.3"
-db_ip_macros = {path = "db_ip_macros", version="0.1.0", optional = true}
-bincode = {version = "1.3", optional=true}
+db_ip_core = {path = "db_ip_core", version="0.2.0"}
+bincode = {version = "=1.3", optional=true}
 
 [dev-dependencies]
 serde_json = "1.0"
@@ -38,3 +31,6 @@ serde_json = "1.0"
 reqwest = {version = "0.11", features=["blocking", "rustls-tls"], default-features=false, optional=true}
 flate2 = {version="1.0", optional=true}
 chrono = {version = "0.4", optional=true}
+db_ip_core = {path = "db_ip_core", version="0.2.0", features=["csv", "serde"]}
+bincode = {version = "=1.3", optional=true}
+serde = {version = "1.0", features=["derive"], optional=true}
