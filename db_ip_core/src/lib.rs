@@ -393,7 +393,7 @@ impl<'de> serde::Deserialize<'de> for CountryCode {
 }
 
 #[cfg(feature = "serde")]
-pub struct CountryCodeStrVisitor;
+struct CountryCodeStrVisitor;
 
 #[cfg(feature = "serde")]
 impl<'de> serde::de::Visitor<'de> for CountryCodeStrVisitor {
@@ -419,7 +419,7 @@ impl<'de> serde::de::Visitor<'de> for CountryCodeStrVisitor {
 }
 
 #[cfg(feature = "serde")]
-pub struct CountryCodeBytesVisitor;
+struct CountryCodeBytesVisitor;
 
 #[cfg(feature = "serde")]
 impl<'de> serde::de::Visitor<'de> for CountryCodeBytesVisitor {
