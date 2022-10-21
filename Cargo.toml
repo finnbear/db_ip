@@ -1,7 +1,7 @@
 [package]
 name = "db_ip"
 authors = ["Finn Bear"]
-version = "0.3.5"
+version = "0.3.6"
 edition = "2018"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/db_ip/"
@@ -17,6 +17,10 @@ nightly = []
 download-country-lite = ["chrono", "flate2", "reqwest", "bincode"]
 include-country-code-lite = ["download-country-lite", "serde", "serde_1", "db_ip_core/bincode"]
 include-region-lite = ["download-country-lite", "region", "serde", "serde_1", "db_ip_core/bincode"]
+
+[package.metadata.docs.rs]
+features = ["ipv4", "ipv6", "include-country-code-lite", "include-region-lite"]
+no-default-features = true
 
 [dependencies]
 csv = {version = "1.1", optional = true}
