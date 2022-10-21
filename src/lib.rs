@@ -56,7 +56,7 @@ mod test {
 
         let db = include_region_database!();
         assert_eq!(
-            db.get_v4(&"94.250.200.0".parse().unwrap()),
+            db.get_v4(&"100.128.0.0".parse().unwrap()),
             Some(Region::NorthAmerica)
         );
     }
@@ -67,7 +67,7 @@ mod test {
         let db = include_country_code_database!();
         println!("country code length v4: {}", db.len_v4());
         assert_eq!(
-            db.get_v4(&"94.250.200.0".parse().unwrap()),
+            db.get_v4(&"100.128.0.0".parse().unwrap()),
             Some(CountryCode::from_str("US").unwrap())
         );
     }
@@ -78,12 +78,13 @@ mod test {
         let db = include_country_code_database!();
         println!("city country code length v4: {}", db.len_v4());
         assert_eq!(
-            db.get_v4(&"94.250.200.0".parse().unwrap()),
+            db.get_v4(&"100.128.0.0".parse().unwrap()),
             Some(CountryCode::from_str("US").unwrap())
         );
     }
 
     #[test]
+    #[ignore = "unreliable - need ipv6 address with stable region"]
     #[cfg(all(feature = "ipv6", feature = "include-region-lite"))]
     fn region_v6() {
         use crate::Region;
