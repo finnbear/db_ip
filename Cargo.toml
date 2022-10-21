@@ -1,14 +1,14 @@
 [package]
 name = "db_ip"
 authors = ["Finn Bear"]
-version = "0.3.6"
+version = "0.3.7"
 edition = "2018"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/finnbear/db_ip/"
 description = "An (unofficial) Rust library for querying db-ip.com data"
 
 [features]
-default = ["ipv4", "ipv6", "download-country-lite", "include-country-code-lite", "include-region-lite"]
+default = ["ipv4", "ipv6", "include-country-code-lite", "include-region-lite"]
 region = ["db_ip_core/region"]
 ipv4 = ["db_ip_core/ipv4"]
 ipv6 = ["db_ip_core/ipv6"]
@@ -19,7 +19,7 @@ include-country-code-lite = ["download-country-lite", "serde", "serde_1", "db_ip
 include-region-lite = ["download-country-lite", "region", "serde", "serde_1", "db_ip_core/bincode"]
 
 [package.metadata.docs.rs]
-features = ["ipv4", "ipv6", "include-country-code-lite", "include-region-lite"]
+features = ["ipv4", "ipv6", "serde", "region"]
 no-default-features = true
 
 [dependencies]
