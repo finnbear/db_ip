@@ -36,7 +36,7 @@ use db_ip::{DbIpDatabase, Region, include_region_database};
 // Embed compressed database in binary:
 let db = include_region_database!();
 // Or, load it from the filesystem:
-// let db = DbIpDatabase::<CountryCode>::from_csv_file("country_or_city_data.csv").unwrap();
+// let db = DbIpDatabase::<Region>::from_csv_file("country_or_city_data.csv").unwrap();
 
 assert_eq!(
     db.get(&"192.99.174.0".parse().unwrap()),
