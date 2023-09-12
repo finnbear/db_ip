@@ -281,7 +281,7 @@ impl<IP: Ord + Copy, V: IpData> DbIpDatabaseInner<IP, V> {
         match self.starts.binary_search(ip) {
             Ok(idx) => self.values[idx],
             Err(idx) => {
-                if self.starts.get(idx).map(|end| ip < end).unwrap_or(true) {
+                if idx > 0 && self.starts.get(idx).map(|end| ip < end).unwrap_or(true) {
                     self.values.get(idx - 1).copied().unwrap_or(None)
                 } else {
                     None
