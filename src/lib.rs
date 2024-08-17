@@ -98,7 +98,7 @@ mod test {
 
     // cargo bench --features nightly  -- bench_region_v4
     #[allow(soft_unstable)]
-    #[cfg(all(feature = "nightly", feature = "embed-country-code-lite"))]
+    #[cfg(all(feature = "nightly", feature = "include-country-code-lite"))]
     #[bench]
     fn bench_region_v4(b: &mut test::Bencher) {
         use crate::Region;
