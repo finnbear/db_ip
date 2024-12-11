@@ -11,7 +11,7 @@ fn main() -> Result<(), &'static str> {
             use std::ops::Sub;
             use std::time::SystemTime;
 
-            for i in 0..12 {
+            for i in 0..48 {
                 let date = Utc::now().date().sub(
                     Duration::from_std(std::time::Duration::from_secs(i * 31 * 24 * 3600)).unwrap(),
                 );
@@ -69,6 +69,9 @@ fn main() -> Result<(), &'static str> {
                     .unwrap_or(true)
                 {
                     let mut resp = reqwest::blocking::get(url).map_err(|_| "request failed")?;
+                    if !resp.status().is_success() {
+                        return Err("failed to download");
+                    }
                     let mut out = File::create(path).map_err(|_| "failed to create file")?;
                     let mut decoded = GzDecoder::new(BufReader::new(&mut resp));
                     io::copy(&mut decoded, &mut out)
